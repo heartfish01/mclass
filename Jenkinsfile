@@ -57,6 +57,9 @@ pipeline{
         stage('Remote Docker Build & Deploy') {
             steps {
                 sshagent (credentials : [env.SSH_CREDENTIALS_ID]) { // 아래코드는 indent가 가장앞으로 저렇게 되어야 에러안나더라. 공백뒤에 있어도 에러날때있었고조심하라
+                // dockerfile 에 가보면 app.jar  있기에 이거 도커파일에 넣어서 spring 서버에던진다. 그런데 이런거 파일이름하나하나 틀리면 에러나게되는거다
+                // rm -f 있느건 이전 도커이미지 지우고 다시 새로하는거다
+                // 포트번호는 이미 위에정해둔 ,그것으로 도커이미지와 명령어 있는거다.
                     sh """
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${REMOTE_USER}@${REMOTE_HOST} << ENDSSH
     cd ${REMOTE_DIR} || exit 1
