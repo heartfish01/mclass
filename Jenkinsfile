@@ -42,5 +42,33 @@ pipeline{
             }
         }
 
+        stage('Copy to Remote Server') {
+            steps {
+                // Jenkins 가 원격 서버에 SSH 접속할 수 있도록 sshagent 사용
+                sshagent (credentials: [env.SSH_CREDENTIALS_ID]){ //ssh 플러그인 jenkins webui 에서 설치한거말하는거다 ssh agent가 
+                    // 원격 서버에 배포 디렉토리 생성 (없으면 새로 만듦)
+                    sh "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${REMOTE_USER}@${REMOTE_HOST} \"mkdir -p ${REMOTE_DIR}\""
+                    // JAR 파일과 Dockerfile을 원격 서버에 복사
+                    sh "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${JAR_FILE_NAME} Dockerfile ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
+                }
+            }
+        }
+
+        stage('Remote Docker Build & Deploy') {
+            steps {
+                sshagent (credentials : [env.SSH_CREDENTIALS_ID]) { // 아래코드는 indent가 가장앞으로 저렇게 되어야 에러안나더라. 공백뒤에 있어도 에러날때있었고조심하라
+                    sh """
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${REMOTE_USER}@${REMOTE_HOST} << ENDSSH
+    cd ${REMOTE_DIR} || exit 1
+    docker rm -f ${CONTAINER_NAME} || true
+    docker build -t ${DOCKER_IMAGE} .
+    docker run -d --name ${CONTAINER_NAME} -p ${PORT}:${PORT} ${DOCKER_IMAGE}
+ENDSSH
+                    """
+
+                }
+            }
+        }
+
     }
 }
